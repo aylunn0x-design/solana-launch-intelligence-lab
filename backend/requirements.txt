@@ -1,0 +1,25 @@
+# Runtime dependencies, pinned for reproducibility.
+# Python 3.13 compatible.
+
+# --- Web framework ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# --- Database ---
+SQLAlchemy==2.0.36
+alembic==1.14.0
+psycopg[binary]==3.2.3      # PostgreSQL driver (binary wheel, no local libpq build)
+
+# --- HTTP client for data providers ---
+httpx==0.28.1
+tenacity==9.0.0             # retry/backoff policy for ingestion
+
+# --- Data analysis / research engine ---
+pandas==2.2.3
+numpy==2.2.1
+scipy==1.15.0
+scikit-learn==1.6.0
+statsmodels==0.14.4
+lifelines==0.30.0           # Kaplan-Meier + Cox proportional hazards
