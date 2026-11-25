@@ -61,6 +61,19 @@ public release.
 - [ ] Replace FastAPI background tasks with a real queue if jobs must survive
       restarts (a job interrupted mid-run currently stays `RUNNING` forever).
 
+## Operational findings
+
+- [x] **Ingestion does not work from Render's free tier.** Measured 2026-11-25:
+      46 HTTP 429s in 48 requests (`discover_pools:new`), then 10 in 10
+      (`discover_pools:top`, zero rows). The same code at the same rate runs
+      cleanly from an ordinary machine, so GeckoTerminal is throttling per IP
+      and Render's free tier shares egress IPs between tenants. Recorded in
+      DEPLOYMENT.md §3. **The deployed service serves data; collection runs
+      from a machine with its own IP.**
+- [ ] If continuous collection on the server is wanted, it needs a host with a
+      dedicated outbound IP (paid Render instance, or any small VPS), or an
+      API key tier from a provider that bills per key rather than per IP.
+
 ## Known defects
 
 - [ ] A job interrupted by a restart is never reclaimed from `RUNNING`. Add a

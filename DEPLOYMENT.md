@@ -77,11 +77,35 @@ zeros.
 
 ## 3. Populating the deployed database
 
+> ### Do not ingest from the Render free tier — measured, not guessed
+>
+> Triggering ingestion on the deployed service does not work. Two jobs run
+> against a healthy Render deployment on 2026-11-25:
+>
+> | Job | Requests | HTTP 429s | Rows written | Status |
+> |---|---|---|---|---|
+> | `discover_pools:new` (10 pages) | 48 | **46** | 40 | `partial` |
+> | `discover_pools:top` (2 pages) | 10 | **10** | 0 | `failed` |
+>
+> The identical code, at the same configured 12 req/min, runs cleanly from an
+> ordinary machine. GeckoTerminal throttles **per IP**, and Render's free tier
+> shares outbound IPs between tenants, so the budget is already spent by other
+> customers before your request arrives. Lowering the configured rate does not
+> help: the limit is not yours to spend.
+>
+> **Therefore: the deployed service should SERVE data, not collect it.** Run
+> collection from a machine with its own IP and point it at the deployed
+> database. That is what the rest of this section does. (A paid Render instance
+> with a dedicated IP, or any VPS, would also work.)
+
 The deployed database starts empty. Three ways to fill it:
 
-### a. Run the collector against the deployed database (simplest)
+### a. Run the collector against the deployed database (recommended)
 
-From your machine, with the external connection string from Render or Neon:
+From your own machine — which has its own IP and therefore its own rate-limit
+budget — with the **External** connection string from Render (Dashboard →
+`solana-lab-db` → "External Database URL"; the *internal* URL only resolves
+inside Render's network):
 
 ```bash
 cd backend
