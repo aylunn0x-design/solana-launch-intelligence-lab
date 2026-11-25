@@ -210,26 +210,35 @@ empty states.
 
 ## Deployment
 
+The stack splits across two hosts, because it has to:
+
+```
+Vercel  ──►  Render (FastAPI container)  ──►  PostgreSQL
+frontend          backend + research engine
+```
+
+**The backend cannot run on Vercel.** Its dependencies total ~521 MB (scipy
+111 MB, pandas 53 MB, scikit-learn 46 MB, statsmodels 38 MB, numpy 35 MB)
+against a 250 MB serverless limit — scipy + numpy + pandas alone is ~251 MB.
+It runs as a container instead. A `render.yaml` blueprint at the repository
+root provisions the service and a PostgreSQL database together in one click.
+
+Step-by-step instructions, including how to populate the deployed database and
+what the free-tier limits actually cost you: **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+
+Local full stack:
+
 ```bash
 cp .env.example .env     # set POSTGRES_PASSWORD
 docker compose up --build
 docker compose exec backend alembic upgrade head
-docker compose exec backend python -m app.cli ingest --feed new --pages 10
 ```
 
 > **Note on verification:** the Compose stack and Dockerfiles were written and
-> reviewed but **could not be executed** in the environment this project was
-> built in (no Docker daemon available). The PostgreSQL path *was* verified
-> directly against a real PostgreSQL 16 server: migrations apply, reverse and
-> re-apply with no drift, and a full ingest → dataset build cycle completed
-> against it. Treat the container build as untested until you run it.
-
-Hosting options: the backend runs anywhere that can run a container (Fly.io,
-Railway, Render); the frontend deploys to Vercel with
-`NEXT_PUBLIC_API_BASE_URL` pointed at the backend. Neither data source requires
-a paid key.
-
----
+> reviewed but **not executed** — no Docker daemon was available where this was
+> built. What they depend on *was* verified: migrations apply, reverse and
+> re-apply against a real PostgreSQL 16 server with no drift, and the container
+> entrypoint was run end-to-end (migrations applied, health check green).
 
 ## API
 
@@ -324,6 +333,7 @@ These are real and they bound what the platform can claim.
 | File | Contents |
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Structure, data flow, decisions and tradeoffs |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Deploying to Render + Vercel, and populating the live database |
 | [RESEARCH_PLAN.md](RESEARCH_PLAN.md) | Hypotheses, variables, methods, confounders |
 | [DATA_DICTIONARY.md](DATA_DICTIONARY.md) | Every table and field, with types and sources |
 | [DATA_SOURCES.md](DATA_SOURCES.md) | What was verified live vs. assumed |

@@ -455,3 +455,31 @@ class TestIngestionAndQuality:
 class TestCorsAndDocs:
     def test_docs_served_outside_production(self, client):
         assert client.get("/docs").status_code == 200
+
+
+class TestDatabaseUrlNormalisation:
+    """Managed hosts hand out `postgres://`, which SQLAlchemy 2 rejects."""
+
+    def _settings(self, url: str):
+        from app.core.config import Settings
+
+        return Settings(database_url=url)
+
+    def test_render_heroku_style_url_is_rewritten(self):
+        s = self._settings("postgres://u:p@host:5432/db")
+        assert s.database_url == "postgresql+psycopg://u:p@host:5432/db"
+
+    def test_bare_postgresql_url_gets_the_driver(self):
+        s = self._settings("postgresql://u:p@host:5432/db")
+        assert s.database_url == "postgresql+psycopg://u:p@host:5432/db"
+
+    def test_explicit_driver_is_left_alone(self):
+        url = "postgresql+psycopg://u:p@host:5432/db"
+        assert self._settings(url).database_url == url
+
+    def test_sqlite_is_left_alone(self):
+        assert self._settings("sqlite:///./x.db").database_url == "sqlite:///./x.db"
+
+    def test_credentials_survive_the_rewrite(self):
+        s = self._settings("postgres://user:p%40ss@h/db")
+        assert "user:p%40ss@h/db" in s.database_url

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,6 +32,26 @@ class Settings(BaseSettings):
         default="sqlite:///./solana_lab.db",
         description="SQLAlchemy URL. sqlite:///./file.db or postgresql+psycopg://user:pw@host/db",
     )
+
+    @field_validator("database_url")
+    @classmethod
+    def _normalise_database_url(cls, value: str) -> str:
+        """Accept the `postgres://` URLs that managed hosts hand out.
+
+        Render, Heroku, Railway and Supabase all expose a connection string
+        beginning `postgres://`. SQLAlchemy 2 removed support for that alias and
+        raises `Can't load plugin: sqlalchemy.dialects:postgres`, so a deploy
+        that simply wires the host's connection string into DATABASE_URL fails
+        at startup. Rewriting it here means the documented one-click deploy
+        works without the operator having to know this.
+
+        A URL that already names a driver (postgresql+psycopg://) is untouched.
+        """
+        if value.startswith("postgres://"):
+            return "postgresql+psycopg://" + value[len("postgres://"):]
+        if value.startswith("postgresql://"):
+            return "postgresql+psycopg://" + value[len("postgresql://"):]
+        return value
 
     # --- CORS: which frontend origins may call this API ---
     cors_origins: str = Field(
